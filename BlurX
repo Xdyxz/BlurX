@@ -1,0 +1,5 @@
+-- BlurX
+getgenv().gethui = function() return game.CoreGui end
+
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/Xdyxz/iorvzi.lua2/refs/heads/main/iorvzi.lua2')))()
+local Window = OrionLib:MakeWindow({Name = "BlurX", HidePremium = false, SaveConfig = true, ConfigFolder = "BlurX"})
