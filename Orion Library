@@ -1710,9 +1710,14 @@ function OrionLib:MakeWindow(WindowConfig)
 		return ElementFunction   
 	end  
 	
-	rionLib:MakeNotification({
+	OrionLib:MakeNotification({
 		Name = "UI Library Upgrade",
 		Content = "New UI Library Available at sirius.menu/discord and sirius.menu/rayfield",
+		Time = 5
+	})
+	OrionLib:MakeNotification({
+		Name = "Thanks for Using BlurX",
+		Content = "If you find any bugs contact us on Discord!",
 		Time = 5
 	})
 	
