@@ -7,45 +7,224 @@ getgenv().gethui = function() return game.CoreGui end
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/Xdyxz/BlurX/refs/heads/main/Orion%20Library')))()
 local Window = OrionLib:MakeWindow({Name = " BlurX [BETA]", HidePremium = false, SaveConfig = true, ConfigFolder = "BlurX"})
 
-local Tab = Window:MakeTab({
+local Tab = Window:MakeTab({ -- Home
 	Name = "Home",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-local Tab = Window:MakeTab({
+ })
+ Tab:AddParagraph("Welcome to BlurX","This Script is still on beta, so some features may not work correctly.")
+ Tab:AddToggle({
+	Name = "Auto-Reset",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddToggle({
+	Name = "Anti-AFK",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddButton({
+	Name = "Destroy the Interface",
+	Callback = function()
+      		OrionLib:Destroy()
+  	end    
+ })
+ Tab:AddButton({
+	Name = "FPS Boost",
+	Callback = function()
+      		print("button pressed")
+  	end    
+ })
+ Tab:AddButton({
+	Name = "Small Server",
+	Callback = function()
+      		print("button pressed")
+  	end    
+ })
+ Tab:AddButton({
+	Name = "Rejoin",
+	Callback = function()
+      		print("button pressed")
+  	end    
+ })
+ Tab:AddButton({
+	Name = "ServerHop",
+	Callback = function()
+      		print("button pressed")
+  	end    
+ })
+ local Section = Tab:AddSection({
+	Name = "Other"
+ })
+ Tab:AddButton({
+	Name = "Copy Discord Server Link",
+	Callback = function()
+      		print("button pressed")
+  	end    
+ })
+ Tab:AddTextbox({
+	Name = "Discord Server Link",
+	Default = "https://discord.gg/mBAYQw5C",
+	TextDisappear = true,
+	Callback = function(Value)
+		print(Value)
+	end	  
+ })
+local Tab = Window:MakeTab({ -- Player 
 	Name = "Player",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-local Tab = Window:MakeTab({
+ })
+ local Section = Tab:AddSection({
+	Name = "Walkspeed"
+ })
+ Tab:AddToggle({
+	Name = "Walkspeed",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddSlider({
+	Name = "Speed",
+	Min = 0,
+	Max = 500,
+	Default = 16,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "",
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ local Section = Tab:AddSection({
+	Name = "Jump"
+ })
+ Tab:AddToggle({
+	Name = "Infinite Jump",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddToggle({
+	Name = "Jumppower",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddSlider({
+	Name = "Jumppower",
+	Min = 0,
+	Max = 500,
+	Default = 50,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "",
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ local Section = Tab:AddSection({
+	Name = "Noclip"
+ })
+ Tab:AddToggle({
+	Name = "Noclip",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ local Section = Tab:AddSection({
+	Name = "Fly"
+ })
+ Tab:AddToggle({
+	Name = "Fly",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddToggle({
+	Name = "VFly",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddSlider({
+	Name = "FlySpeed",
+	Min = 0,
+	Max = 100,
+	Default = 10,
+	Color = Color3.fromRGB(255,255,255),
+	Increment = 1,
+	ValueName = "",
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ 
+ Tab:AddParagraph("VFly","Bypasses some Anti-Cheat")
+ local Section = Tab:AddSection({
+	Name = "Desync"
+ })
+ Tab:AddToggle({
+	Name = " Desync",
+	Default = false,
+	Callback = function(Value)
+		print(Value)
+	end    
+ })
+ Tab:AddParagraph("Desync","Makes you look laggy on others Client")
+local Tab = Window:MakeTab({ -- Target
 	Name = "Target",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-local Tab = Window:MakeTab({
+ })
+local Tab = Window:MakeTab({ -- Visual
 	Name = "Visual",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-local Tab = Window:MakeTab({
+ })
+local Tab = Window:MakeTab({ -- Keybinds
 	Name = "Keybinds",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-local Tab = Window:MakeTab({
+ })
+local Tab = Window:MakeTab({ -- Loopm
 	Name = "Loop",
 	Icon = "rbxassetid://4483345998",
 	PremiumOnly = false
-})
-
+ })
+local Tab = Window:MakeTab({ -- Farm
+	Name = "Farm",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+ })
 OrionLib:Init()
 
 task.wait(0)
 
+
+
+
+
+
+
+
+
+
+
 local UserInputService = game:GetService("UserInputService")
 local guiVisible = true -- track visibility
 
--- Find the Orion GUI in CoreGui (not OrionBliz)
+-- Find the Orion GUI in CoreGui
 local OrionGUI = game:GetService("CoreGui"):FindFirstChild("Orion")
 
 if OrionGUI then
@@ -58,6 +237,18 @@ if OrionGUI then
     end)
 else
     warn("Orion GUI not found in CoreGui!")
+end
+
+-- Detect mobile
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local guiVisible = true
+
+local OrionGUI = game:GetService("CoreGui"):FindFirstChild("Orion")
+if not OrionGUI then
+    warn("Orion GUI not found!")
+    return
 end
 
 -- Detect mobile
@@ -85,23 +276,21 @@ if UserInputService.TouchEnabled then
     screenGui.Name = "OrionToggleButton"
     screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
     
-    -- Create button frame
+    -- Create button frame (fixed position)
     local buttonFrame = Instance.new("Frame")
     buttonFrame.Name = "ToggleButtonFrame"
-    buttonFrame.Size = UDim2.new(0, 60, 0, 60)
-    buttonFrame.Position = UDim2.new(0, 20, 0, 100)
+    buttonFrame.Size = UDim2.new(0, 80, 0, 80) -- bigger size
+    buttonFrame.Position = UDim2.new(0, 20, 0, 100) -- fixed position
     buttonFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45) -- dark background
     buttonFrame.BackgroundTransparency = 0
     buttonFrame.Parent = screenGui
-    buttonFrame.Active = true
-    buttonFrame.Draggable = true
 
-    -- Add rounded corners
+    -- Rounded corners
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
+    corner.CornerRadius = UDim.new(0, 15)
     corner.Parent = buttonFrame
 
-    -- Add image
+    -- Add icon image
     local image = Instance.new("ImageLabel")
     image.Name = "Icon"
     image.Size = UDim2.new(0.8, 0, 0.8, 0)
