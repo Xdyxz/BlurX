@@ -1,5 +1,102 @@
--- BlurX
+-- BlurX [BETA]
+-- Premium/Robux/Verified:   
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/edgeiy/infiniteyield/master/source"))()
+
 getgenv().gethui = function() return game.CoreGui end
 
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/Xdyxz/BlurX/refs/heads/main/Orion%20Library')))()
-local Window = OrionLib:MakeWindow({Name = "BlurX", HidePremium = false, SaveConfig = true, ConfigFolder = "BlurX"})
+local Window = OrionLib:MakeWindow({Name = " BlurX [BETA]", HidePremium = false, SaveConfig = true, ConfigFolder = "BlurX"})
+
+local Tab = Window:MakeTab({
+	Name = "Home",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Player",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Target",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Visual",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Keybinds",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+local Tab = Window:MakeTab({
+	Name = "Loop",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+OrionLib:Init()
+
+task.wait(0)
+
+local UserInputService = game:GetService("UserInputService")
+local guiVisible = true -- track visibility
+
+-- Find the Orion GUI in CoreGui (not OrionBliz)
+local OrionGUI = game:GetService("CoreGui"):FindFirstChild("Orion")
+
+if OrionGUI then
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == Enum.KeyCode.M then
+            guiVisible = not guiVisible
+            OrionGUI.Enabled = guiVisible -- toggle visibility
+        end
+    end)
+else
+    warn("Orion GUI not found in CoreGui!")
+end
+
+-- Detect mobile
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local guiVisible = true
+
+local OrionGUI = game:GetService("CoreGui"):FindFirstChild("Orion")
+if not OrionGUI then
+    warn("Orion GUI not found!")
+    return
+end
+
+-- Function to toggle Orion visibility
+local function toggleOrion()
+    guiVisible = not guiVisible
+    OrionGUI.Enabled = guiVisible
+end
+
+-- Only run if mobile
+if UserInputService.TouchEnabled then
+    -- Create ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "OrionToggleButton"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    
+    -- Create button
+    local button = Instance.new("ImageButton")
+    button.Name = "ToggleButton"
+    button.Size = UDim2.new(0, 50, 0, 50)
+    button.Position = UDim2.new(0, 20, 0, 100)
+    button.Image = "rbxassetid://4483345998"
+    button.BackgroundTransparency = 1
+    button.Parent = screenGui
+    button.Active = true
+    button.Draggable = true -- makes it movable
+    
+    -- Click event
+    button.MouseButton1Click:Connect(toggleOrion)
+end
