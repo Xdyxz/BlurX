@@ -1,4 +1,4 @@
--- 480 = BlurX
+-- 480 blurx
 
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -1713,11 +1713,6 @@ function OrionLib:MakeWindow(WindowConfig)
 	OrionLib:MakeNotification({
 		Name = "UI Library Upgrade",
 		Content = "New UI Library Available at sirius.menu/discord and sirius.menu/rayfield",
-		Time = 5
-	})
-	OrionLib:MakeNotification({
-		Name = "Thanks for Using BlurX",
-		Content = "If you find any bugs contact us on Discord!",
 		Time = 5
 	})
 	
