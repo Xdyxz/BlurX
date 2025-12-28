@@ -1,7 +1,4 @@
 -- BlurX [BETA]
--- Premium/Robux/Verified:   
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/edgeiy/infiniteyield/master/source"))()
 
 getgenv().gethui = function() return game.CoreGui end
 
