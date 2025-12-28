@@ -79,12 +79,16 @@ Make sure you make your slider a variable (local CoolSlider = Tab:AddSlider...) 
 
 Creating a Label
 Tab:AddLabel("Label")
+
 Changing the value of an existing label
 CoolLabel:Set("Label New!")
+
 Creating a Paragraph
 Tab:AddParagraph("Paragraph","Paragraph Content")
+
 Changing an existing paragraph
 CoolParagraph:Set("Paragraph New!", "New Paragraph Content!")
+
 Creating an Adaptive Input
 Tab:AddTextbox({
 	Name = "Textbox",
