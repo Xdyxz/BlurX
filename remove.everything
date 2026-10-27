@@ -1,4 +1,5 @@
--- Hindustanhack: One-Shot Part Remover GUI + Floor Saver Toggle
+-- Hindustanhack: Part Remover
+-- Safe Part = static anchored slab named "partscriptremover", spawns under you once, never moves
 -- Works on Xeno + Delta executors
 
 local Players = game:GetService("Players")
@@ -8,20 +9,19 @@ local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
+local SAFE_NAME   = "partscriptremover"
+local COIN_NAME   = "Coin_Server"
 
 -- ============================================================
 -- State
 -- ============================================================
-local FloorSaver = {
-    Enabled = false,
-    Part    = nil,
-    Conn    = nil,
-}
+local SafePart = { Enabled = false, Part = nil, CharAdded = nil }
+local Looper   = { Enabled = false, Thread = nil, Delay = 1 }
 
 -- ============================================================
--- Safety: protected character parts
+-- Protection checks
 -- ============================================================
-local function isProtected(part)
+local function isCharacterPart(part)
     if not part or not part:IsA("BasePart") then return true end
     local model = part:FindFirstAncestorOfClass("Model")
     while model do
@@ -32,6 +32,23 @@ local function isProtected(part)
     return false
 end
 
+local function isInProtectedTree(part)
+    local node = part
+    while node and node ~= Workspace do
+        local n = node.Name
+        if n == COIN_NAME or n == SAFE_NAME then return true end
+        node = node.Parent
+    end
+    return false
+end
+
+local function isProtected(part)
+    if isCharacterPart(part) then return true end
+    if isInProtectedTree(part) then return true end
+    if SafePart.Part and part == SafePart.Part then return true end
+    return false
+end
+
 -- ============================================================
 -- Nuke
 -- ============================================================
@@ -39,84 +56,105 @@ local function nukeParts()
     local removed = 0
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") and not isProtected(obj) then
-            if not (FloorSaver.Part and obj == FloorSaver.Part) then
-                pcall(function() obj:Destroy() end)
-                removed += 1
-            end
+            pcall(function() obj:Destroy() end)
+            removed += 1
         end
     end
     return removed
 end
 
 -- ============================================================
--- Floor saver
+-- Safe Part (static, no movement)
 -- ============================================================
-local function stopFloor()
-    if FloorSaver.Conn then FloorSaver.Conn:Disconnect(); FloorSaver.Conn = nil end
-    if FloorSaver.Part then pcall(function() FloorSaver.Part:Destroy() end); FloorSaver.Part = nil end
+local function stopSafePart()
+    if SafePart.CharAdded then SafePart.CharAdded:Disconnect(); SafePart.CharAdded = nil end
+    if SafePart.Part then pcall(function() SafePart.Part:Destroy() end); SafePart.Part = nil end
 end
 
-local function spawnFloor()
+local function spawnSafePart()
     local char = LocalPlayer.Character
     local hrp  = char and char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
+    if SafePart.Part then pcall(function() SafePart.Part:Destroy() end) end
 
-    local floor = Instance.new("Part")
-    floor.Name          = "HindustanFloor"
-    floor.Size          = Vector3.new(60, 1, 60)
-    floor.Anchored      = true
-    floor.CanCollide     = true
-    floor.Material      = Enum.Material.Neon
-    floor.Color         = Color3.fromRGB(0, 255, 120)
-    floor.Transparency  = 0.4
-    floor.Position      = hrp.Position - Vector3.new(0, 3.5, 0)
-    floor.Parent        = Workspace
-    FloorSaver.Part     = floor
-
-    FloorSaver.Conn = RunService.Heartbeat:Connect(function()
-        local c = LocalPlayer.Character
-        local h = c and c:FindFirstChild("HumanoidRootPart")
-        if not h or not FloorSaver.Part then return end
-        FloorSaver.Part.Position = Vector3.new(h.Position.X, h.Position.Y - 3.5, h.Position.Z)
-    end)
+    local slab = Instance.new("Part")
+    slab.Name         = SAFE_NAME
+    slab.Size         = Vector3.new(60, 1, 60)
+    slab.Anchored     = true
+    slab.CanCollide   = true
+    slab.Material     = Enum.Material.Neon
+    slab.Color        = Color3.fromRGB(0, 255, 120)
+    slab.Transparency = 0.4
+    slab.Position     = hrp.Position - Vector3.new(0, 3.5, 0)
+    slab.Parent       = Workspace
+    SafePart.Part     = slab
 end
 
-local function startFloor()
-    stopFloor()
-    spawnFloor()
-
-    -- if character respawns, re-attach floor
-    FloorSaver.CharAdded = LocalPlayer.CharacterAdded:Connect(function()
-        task.wait(1)
-        if FloorSaver.Enabled then spawnFloor() end
-    end)
-end
-
-local function setFloor(on)
-    FloorSaver.Enabled = on
+local function setSafePart(on)
+    SafePart.Enabled = on
     if on then
-        startFloor()
+        stopSafePart()
+        spawnSafePart()
+        -- only respawn if the character actually respawns (the slab does not follow)
+        SafePart.CharAdded = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1)
+            if SafePart.Enabled then spawnSafePart() end
+        end)
     else
-        if FloorSaver.CharAdded then FloorSaver.CharAdded:Disconnect(); FloorSaver.CharAdded = nil end
-        stopFloor()
+        stopSafePart()
     end
+end
+
+-- ============================================================
+-- Looper
+-- ============================================================
+local function stopLooper()
+    Looper.Enabled = false
+    if Looper.Thread then
+        pcall(function() task.cancel(Looper.Thread) end)
+        Looper.Thread = nil
+    end
+end
+
+local function startLooper(statusLabel, loopBtn)
+    Looper.Enabled = true
+    Looper.Thread = task.spawn(function()
+        while Looper.Enabled do
+            local count = nukeParts()
+            if SafePart.Enabled and not SafePart.Part then spawnSafePart() end
+            if statusLabel then
+                statusLabel.Text = ("Loop removed %d parts"):format(count)
+                statusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+            end
+            task.wait(Looper.Delay)
+        end
+        if loopBtn then
+            loopBtn.Text = "Loop Remover"
+            loopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            loopBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        end
+        if statusLabel then
+            statusLabel.Text = "Loop stopped"
+            statusLabel.TextColor3 = Color3.fromRGB(180, 180, 180)
+        end
+    end)
 end
 
 -- ============================================================
 -- GUI
 -- ============================================================
-local old = CoreGui:FindFirstChild("HindustanNukeGui")
+local old = CoreGui:FindFirstChild("HindustanPartRemover")
 if old then old:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "HindustanNukeGui"
+ScreenGui.Name = "HindustanPartRemover"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 280, 0, 210)
-Main.Position = UDim2.new(0.5, -140, 0.5, -105)
+Main.Size = UDim2.new(0, 280, 0, 300)
+Main.Position = UDim2.new(0.5, -140, 0.5, -150)
 Main.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -134,7 +172,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -34, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Hindustan Nuke"
+Title.Text = "part remover"
 Title.TextColor3 = Color3.fromRGB(0, 255, 120)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
@@ -154,74 +192,139 @@ CloseBtn.Parent = TopBar
 Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
 local NukeBtn = Instance.new("TextButton")
-NukeBtn.Size = UDim2.new(1, -20, 0, 50)
+NukeBtn.Size = UDim2.new(1, -20, 0, 46)
 NukeBtn.Position = UDim2.new(0, 10, 0, 42)
 NukeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
 NukeBtn.BorderSizePixel = 0
-NukeBtn.Text = "REMOVE ALL PARTS"
+NukeBtn.Text = "Remove everything"
 NukeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 NukeBtn.Font = Enum.Font.GothamBold
 NukeBtn.TextSize = 13
 NukeBtn.Parent = Main
 Instance.new("UICorner", NukeBtn).CornerRadius = UDim.new(0, 6)
 
--- Floor toggle
-local FloorBtn = Instance.new("TextButton")
-FloorBtn.Size = UDim2.new(1, -20, 0, 36)
-FloorBtn.Position = UDim2.new(0, 10, 0, 102)
-FloorBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-FloorBtn.BorderSizePixel = 0
-FloorBtn.Text = "Floor Saver: OFF"
-FloorBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-FloorBtn.Font = Enum.Font.GothamBold
-FloorBtn.TextSize = 12
-FloorBtn.Parent = Main
-Instance.new("UICorner", FloorBtn).CornerRadius = UDim.new(0, 6)
+local LoopBtn = Instance.new("TextButton")
+LoopBtn.Size = UDim2.new(1, -20, 0, 36)
+LoopBtn.Position = UDim2.new(0, 10, 0, 96)
+LoopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+LoopBtn.BorderSizePixel = 0
+LoopBtn.Text = "Loop Remover"
+LoopBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+LoopBtn.Font = Enum.Font.GothamBold
+LoopBtn.TextSize = 12
+LoopBtn.Parent = Main
+Instance.new("UICorner", LoopBtn).CornerRadius = UDim.new(0, 6)
+
+local DelayLabel = Instance.new("TextLabel")
+DelayLabel.Size = UDim2.new(0.5, -14, 0, 32)
+DelayLabel.Position = UDim2.new(0, 10, 0, 140)
+DelayLabel.BackgroundTransparency = 1
+DelayLabel.Text = "Delay"
+DelayLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+DelayLabel.Font = Enum.Font.GothamBold
+DelayLabel.TextSize = 12
+DelayLabel.TextXAlignment = Enum.TextXAlignment.Left
+DelayLabel.Parent = Main
+
+local DelayBox = Instance.new("TextBox")
+DelayBox.Size = UDim2.new(0.5, -14, 0, 32)
+DelayBox.Position = UDim2.new(0.5, 4, 0, 140)
+DelayBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+DelayBox.BorderSizePixel = 0
+DelayBox.Text = "1"
+DelayBox.PlaceholderText = "seconds"
+DelayBox.TextColor3 = Color3.fromRGB(230, 230, 230)
+DelayBox.Font = Enum.Font.Gotham
+DelayBox.TextSize = 12
+DelayBox.Parent = Main
+Instance.new("UICorner", DelayBox).CornerRadius = UDim.new(0, 6)
+
+local SafeBtn = Instance.new("TextButton")
+SafeBtn.Size = UDim2.new(1, -20, 0, 36)
+SafeBtn.Position = UDim2.new(0, 10, 0, 180)
+SafeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+SafeBtn.BorderSizePixel = 0
+SafeBtn.Text = "Safe Part: OFF"
+SafeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+SafeBtn.Font = Enum.Font.GothamBold
+SafeBtn.TextSize = 12
+SafeBtn.Parent = Main
+Instance.new("UICorner", SafeBtn).CornerRadius = UDim.new(0, 6)
 
 local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, -20, 0, 30)
-Status.Position = UDim2.new(0, 10, 0, 148)
+Status.Size = UDim2.new(1, -20, 0, 60)
+Status.Position = UDim2.new(0, 10, 0, 224)
 Status.BackgroundTransparency = 1
-Status.Text = "Ready"
-Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+Status.Text = "Coin_Server + partscriptremover protected"
+Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 Status.Font = Enum.Font.Gotham
-Status.TextSize = 12
+Status.TextSize = 11
+Status.TextWrapped = true
 Status.Parent = Main
 
 -- ============================================================
--- Floor button logic
+-- Wiring
 -- ============================================================
-FloorBtn.MouseButton1Click:Connect(function()
-    local newState = not FloorSaver.Enabled
-    setFloor(newState)
-    if newState then
-        FloorBtn.Text = "Floor Saver: ON"
-        FloorBtn.BackgroundColor3 = Color3.fromRGB(30, 90, 50)
-        FloorBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
-        Status.Text = "Floor spawned under you"
+DelayBox.FocusLost:Connect(function()
+    local n = tonumber(DelayBox.Text)
+    if n and n >= 0.05 and n <= 60 then
+        Looper.Delay = n
+        DelayBox.Text = tostring(n)
     else
-        FloorBtn.Text = "Floor Saver: OFF"
-        FloorBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
-        FloorBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-        Status.Text = "Floor removed"
+        DelayBox.Text = tostring(Looper.Delay)
     end
 end)
 
--- ============================================================
--- Confirm-then-execute
--- ============================================================
+SafeBtn.MouseButton1Click:Connect(function()
+    local newState = not SafePart.Enabled
+    setSafePart(newState)
+    if newState then
+        SafeBtn.Text = "Safe Part: ON"
+        SafeBtn.BackgroundColor3 = Color3.fromRGB(30, 90, 50)
+        SafeBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
+        Status.Text = "Static slab spawned under you"
+        Status.TextColor3 = Color3.fromRGB(0, 255, 120)
+    else
+        SafeBtn.Text = "Safe Part: OFF"
+        SafeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        SafeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        Status.Text = "Slab removed"
+        Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+end)
+
+LoopBtn.MouseButton1Click:Connect(function()
+    if Looper.Enabled then
+        stopLooper()
+        LoopBtn.Text = "Loop Remover"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        LoopBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    else
+        LoopBtn.Text = "Loop Remover: ON"
+        LoopBtn.BackgroundColor3 = Color3.fromRGB(30, 90, 50)
+        LoopBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
+        startLooper(Status, LoopBtn)
+    end
+end)
+
 local armed, armToken = false, 0
 
 local function disarm(msg)
     armed = false
     armToken += 1
-    NukeBtn.Text = "REMOVE ALL PARTS"
+    NukeBtn.Text = "Remove everything"
     NukeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    Status.Text = msg or "Ready"
-    Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Status.Text = msg or "Coin_Server + partscriptremover protected"
+    Status.TextColor3 = Color3.fromRGB(150, 150, 150)
 end
 
 NukeBtn.MouseButton1Click:Connect(function()
+    if Looper.Enabled then
+        Status.Text = "Turn Loop Remover OFF first"
+        Status.TextColor3 = Color3.fromRGB(255, 150, 150)
+        return
+    end
+
     if not armed then
         armed = true
         armToken += 1
@@ -238,38 +341,36 @@ NukeBtn.MouseButton1Click:Connect(function()
 
     armed = false
     armToken += 1
-    NukeBtn.Text = "NUKE READY"
+    NukeBtn.Text = "Removing..."
     NukeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    Status.Text = "Removing..."
-    Status.TextColor3 = Color3.fromRGB(255, 120, 120)
 
     task.spawn(function()
         local count = nukeParts()
-        -- if floor saver is on, ensure floor exists after nuke
-        if FloorSaver.Enabled then spawnFloor() end
+        if SafePart.Enabled then spawnSafePart() end
         Status.Text = ("Removed %d parts"):format(count)
         Status.TextColor3 = Color3.fromRGB(0, 255, 120)
         NukeBtn.Text = "DONE"
         task.wait(2)
-        NukeBtn.Text = "REMOVE ALL PARTS"
+        NukeBtn.Text = "Remove everything"
         NukeBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-        Status.Text = "Ready"
-        Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+        Status.Text = "Coin_Server + partscriptremover protected"
+        Status.TextColor3 = Color3.fromRGB(150, 150, 150)
     end)
 end)
 
 CloseBtn.MouseButton1Click:Connect(function()
-    setFloor(false)
+    stopLooper()
+    setSafePart(false)
     ScreenGui:Destroy()
 end)
 
 -- ============================================================
--- Drag (mouse + touch)
+-- Drag
 -- ============================================================
 do
     local dragging, dragStart, startPos = false, nil, nil
 
-    Main.InputBegan:Connect(function(input)
+    TopBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
