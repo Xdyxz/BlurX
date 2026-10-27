@@ -1,5 +1,5 @@
 -- Hindustanhack: Part Remover
--- Safe Part = static anchored slab named "partscriptremover", spawns under you once, never moves
+-- Float = floor always under your legs, catches you, lets you walk
 -- Works on Xeno + Delta executors
 
 local Players = game:GetService("Players")
@@ -16,6 +16,7 @@ local COIN_NAME   = "Coin_Server"
 -- State
 -- ============================================================
 local SafePart = { Enabled = false, Part = nil, CharAdded = nil }
+local Float    = { Enabled = false, Part = nil, Conn = nil, CharAdded = nil }
 local Looper   = { Enabled = false, Thread = nil, Delay = 1 }
 
 -- ============================================================
@@ -46,6 +47,7 @@ local function isProtected(part)
     if isCharacterPart(part) then return true end
     if isInProtectedTree(part) then return true end
     if SafePart.Part and part == SafePart.Part then return true end
+    if Float.Part    and part == Float.Part    then return true end
     return false
 end
 
@@ -64,7 +66,7 @@ local function nukeParts()
 end
 
 -- ============================================================
--- Safe Part (static, no movement)
+-- Safe Part (static slab)
 -- ============================================================
 local function stopSafePart()
     if SafePart.CharAdded then SafePart.CharAdded:Disconnect(); SafePart.CharAdded = nil end
@@ -95,13 +97,69 @@ local function setSafePart(on)
     if on then
         stopSafePart()
         spawnSafePart()
-        -- only respawn if the character actually respawns (the slab does not follow)
         SafePart.CharAdded = LocalPlayer.CharacterAdded:Connect(function()
             task.wait(1)
             if SafePart.Enabled then spawnSafePart() end
         end)
     else
         stopSafePart()
+    end
+end
+
+-- ============================================================
+-- Float (floor that ALWAYS catches you under your feet)
+-- ============================================================
+local FLOAT_DROP = 3.2
+local FLOAT_SIZE = 14
+
+local function stopFloat()
+    if Float.Conn then Float.Conn:Disconnect(); Float.Conn = nil end
+    if Float.CharAdded then Float.CharAdded:Disconnect(); Float.CharAdded = nil end
+    if Float.Part then pcall(function() Float.Part:Destroy() end); Float.Part = nil end
+end
+
+local function spawnFloat()
+    local char = LocalPlayer.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    if Float.Part then pcall(function() Float.Part:Destroy() end) end
+
+    local slab = Instance.new("Part")
+    slab.Name         = SAFE_NAME
+    slab.Size         = Vector3.new(FLOAT_SIZE, 1, FLOAT_SIZE)
+    slab.Anchored     = true
+    slab.CanCollide   = true
+    slab.Material     = Enum.Material.Neon
+    slab.Color        = Color3.fromRGB(0, 200, 255)
+    slab.Transparency = 0.4
+    slab.Position     = hrp.Position - Vector3.new(0, FLOAT_DROP, 0)
+    slab.Parent       = Workspace
+    Float.Part        = slab
+
+    Float.Conn = RunService.Stepped:Connect(function()
+        if not Float.Enabled or not Float.Part then return end
+        local c = LocalPlayer.Character
+        local h = c and c:FindFirstChild("HumanoidRootPart")
+        if not h then return end
+        Float.Part.CFrame = CFrame.new(h.Position.X, h.Position.Y - FLOAT_DROP, h.Position.Z)
+        local v = h.AssemblyLinearVelocity
+        if v.Y < 0 and (h.Position.Y - FLOAT_DROP) <= (Float.Part.Position.Y + 1.5) then
+            h.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+        end
+    end)
+end
+
+local function setFloat(on)
+    Float.Enabled = on
+    if on then
+        stopFloat()
+        spawnFloat()
+        Float.CharAdded = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(1)
+            if Float.Enabled then spawnFloat() end
+        end)
+    else
+        stopFloat()
     end
 end
 
@@ -122,6 +180,7 @@ local function startLooper(statusLabel, loopBtn)
         while Looper.Enabled do
             local count = nukeParts()
             if SafePart.Enabled and not SafePart.Part then spawnSafePart() end
+            if Float.Enabled    and not Float.Part    then spawnFloat()    end
             if statusLabel then
                 statusLabel.Text = ("Loop removed %d parts"):format(count)
                 statusLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
@@ -153,8 +212,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = CoreGui
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 280, 0, 300)
-Main.Position = UDim2.new(0.5, -140, 0.5, -150)
+Main.Size = UDim2.new(0, 280, 0, 336)
+Main.Position = UDim2.new(0.5, -140, 0.5, -168)
 Main.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -251,9 +310,21 @@ SafeBtn.TextSize = 12
 SafeBtn.Parent = Main
 Instance.new("UICorner", SafeBtn).CornerRadius = UDim.new(0, 6)
 
+local FloatBtn = Instance.new("TextButton")
+FloatBtn.Size = UDim2.new(1, -20, 0, 36)
+FloatBtn.Position = UDim2.new(0, 10, 0, 224)
+FloatBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+FloatBtn.BorderSizePixel = 0
+FloatBtn.Text = "Float: OFF"
+FloatBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+FloatBtn.Font = Enum.Font.GothamBold
+FloatBtn.TextSize = 12
+FloatBtn.Parent = Main
+Instance.new("UICorner", FloatBtn).CornerRadius = UDim.new(0, 6)
+
 local Status = Instance.new("TextLabel")
 Status.Size = UDim2.new(1, -20, 0, 60)
-Status.Position = UDim2.new(0, 10, 0, 224)
+Status.Position = UDim2.new(0, 10, 0, 268)
 Status.BackgroundTransparency = 1
 Status.Text = "Coin_Server + partscriptremover protected"
 Status.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -289,6 +360,24 @@ SafeBtn.MouseButton1Click:Connect(function()
         SafeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
         SafeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
         Status.Text = "Slab removed"
+        Status.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+end)
+
+FloatBtn.MouseButton1Click:Connect(function()
+    local newState = not Float.Enabled
+    setFloat(newState)
+    if newState then
+        FloatBtn.Text = "Float: ON"
+        FloatBtn.BackgroundColor3 = Color3.fromRGB(30, 90, 50)
+        FloatBtn.TextColor3 = Color3.fromRGB(0, 255, 120)
+        Status.Text = "Floor follows your legs — walk anywhere"
+        Status.TextColor3 = Color3.fromRGB(0, 255, 120)
+    else
+        FloatBtn.Text = "Float: OFF"
+        FloatBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+        FloatBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        Status.Text = "Float off"
         Status.TextColor3 = Color3.fromRGB(180, 180, 180)
     end
 end)
@@ -347,6 +436,7 @@ NukeBtn.MouseButton1Click:Connect(function()
     task.spawn(function()
         local count = nukeParts()
         if SafePart.Enabled then spawnSafePart() end
+        if Float.Enabled    then spawnFloat()    end
         Status.Text = ("Removed %d parts"):format(count)
         Status.TextColor3 = Color3.fromRGB(0, 255, 120)
         NukeBtn.Text = "DONE"
@@ -361,6 +451,7 @@ end)
 CloseBtn.MouseButton1Click:Connect(function()
     stopLooper()
     setSafePart(false)
+    setFloat(false)
     ScreenGui:Destroy()
 end)
 
